@@ -1,27 +1,14 @@
 #!/usr/bin/python3
 
-import color_transform as ct
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk
 from bszgw import Entry, Grid, GridChild as GC, App
+from discount_babl import Color
 
 
 LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-
-
-class Color():
-    def __init__(self, r: float = 1.0, g: float = 1.0, b: float = 1.0):
-        self.R = r
-        self.G = g
-        self.B = b
-
-    def as_SRGB(self):
-        return (self.R, self.G, self.B)
-
-    def as_HEX(self):
-        return ct.IRGBtoHEX(*ct.SRGBtoIRGB(*self.as_SRGB()))
 
 
 def override_color(widget: Gtk.Widget, fg: Color = None, bg: Color = None):
@@ -79,7 +66,7 @@ def main():
         elif x == 7:
             col = Color()
         else:
-            col = Color(*ct.LCHtoSRGB(50, 30, x * 60 - 60))
+            col = Color().set_LCH(50, 50, x * 60 - 60)
         override_color(term_colors_bright[x], fg=col)
 
     grid = Grid()
