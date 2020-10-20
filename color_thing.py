@@ -8,6 +8,9 @@ from bszgw import Adjuster, Entry, Grid, GridChild as GC, App
 from discount_babl import Color
 
 
+LOREM_IPSUM_MINI = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+
+
 class ColorAdjuster(Grid):
     def __init__(self, color: Color):
         super(ColorAdjuster, self).__init__()
@@ -32,9 +35,6 @@ class ColorAdjuster(Grid):
 
     def __set(self, widget):
         self.color.set_LCH(*[w.value for w in self.adjusters])
-
-
-LOREM_IPSUM_MINI = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 
 
 def override_color(widget: Gtk.Widget, fg: Color = None, bg: Color = None):
@@ -92,8 +92,6 @@ def main():
     dim_box.entry.props.wrap_mode = Gtk.WrapMode.WORD
     dim_box.entry.props.editable = False
     dim_box.entry.provider = Gtk.CssProvider()
-
-    # Color demos
 
     # Labels
     term_color_labels = [
@@ -155,6 +153,7 @@ def main():
     for w in fg_adjuster.adjusters+bg_adjuster.adjusters + [l_adj, c_adj, h_adj, d_adj]:
         w.adjustment.connect("value-changed", on_adj_change)
 
+    # convert UI vals to Color list
     def gen_colors():
         return build_colors(
                 fg_adjuster.color,
@@ -164,7 +163,6 @@ def main():
                 h_adj.value,
                 d_adj.value,
                 )
-
 
     grid = Grid()
     # attach displays
