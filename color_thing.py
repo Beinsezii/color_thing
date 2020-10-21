@@ -91,7 +91,7 @@ def save_to_file(fg, bg, l, c, h, dim, oled):
 
     if response == Gtk.ResponseType.ACCEPT:
         data = list(fg.as_SRGB()) + list(bg.as_SRGB()) + [l, c, h, dim, oled]
-        with open(chooser.get_filename(), mode='w') as saveto:
+        with open(chooser.get_filename(), mode='w', encoding="UTF-8") as saveto:
             saveto.write("FG_R:{:.1f}\nFG_G:{:.1f}\nFG_B:{:.1f}\n"
                          "BG_R:{:.1f}\nBG_G:{:.1f}\nBG_B:{:.1f}\n"
                          "L:{:.1f}\nC:{:.1f}\nH:{:.1f}\nDIM:{:.1f}\nOLED:{}".format(*data))
