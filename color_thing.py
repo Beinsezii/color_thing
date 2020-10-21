@@ -12,14 +12,14 @@ LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do e
 
 
 class ColorAdjuster(Grid):
-    def __init__(self, color: Color):
+    def __init__(self, color: Color, label=""):
         super(ColorAdjuster, self).__init__()
 
         self.color = color
         L, C, H = self.color.as_LCH()
-        self.L_adj = Adjuster.new('L', L, -100, 200, 5, 10, 1)
-        self.C_adj = Adjuster.new('C', C, -100, 200, 5, 10, 1)
-        self.H_adj = Adjuster.new('H', H, 0, 360, 5, 15, 1)
+        self.L_adj = Adjuster.new(f'{label} Lightness', L, -100, 200, 5, 10, 1)
+        self.C_adj = Adjuster.new(f'{label} Chroma', C, -100, 200, 5, 10, 1)
+        self.H_adj = Adjuster.new(f'{label} Hue', H, 0, 360, 5, 15, 1)
         self.adjusters = [self.L_adj, self.C_adj, self.H_adj]
         for w in self.adjusters:
             w.adjustment.connect("value-changed", self.__set)
@@ -99,6 +99,11 @@ def save_to_file(fg, bg, l, c, h, dim, oled):
     chooser.destroy()
 
 
+def load_from_file():
+    data = []
+    return data
+
+
 def main():
     # Main text boxes
     main_box = Entry(label="Foreground/Background", value=LOREM_IPSUM, min_height=150)
@@ -162,14 +167,14 @@ def main():
         save_to_file(*get_vals())
 
     def on_load(widget):
-        pass
+        data = load_from_file()
 
     def on_export(widget):
         pass
 
     # Pickers
-    fg_adjuster = ColorAdjuster(Color(1, 1, 1))
-    bg_adjuster = ColorAdjuster(Color(0, 0, 0))
+    fg_adjuster = ColorAdjuster(Color(1, 1, 1), "FG")
+    bg_adjuster = ColorAdjuster(Color(0, 0, 0), "BG")
 
     # Adjusters
     l_adj = Adjuster.new("Colors Lightness", 50, -100, 100, 5, 10, 1)
@@ -184,7 +189,7 @@ def main():
     load_button = Button("Load", on_load, tooltip="Load vals from file")
     oled_toggle = CheckButton("OLED Mode", False, tooltip="Make the BG pure black")
     export_button = Button("Export", on_export, tooltip="Export palette")
-    action_bar = AutoBox([save_button, load_button, oled_toggle, export_button], 5, 5, 0)
+    action_bar = AutoBox([save_button, load_button, export_button, oled_toggle], 5, 5, 0)
     # action_bar = Grid()
     # action_bar.attach_all(save_button, load_button, oled_toggle, export_button, direction=Gtk.DirectionType.RIGHT)
 
@@ -209,13 +214,12 @@ def main():
     grid.attach_all(GC(main_box, height=2, width=8), GC(dim_box, height=2, width=8))
 
     # attach janky-ass custom fg/bg adjusters
-    grid.attach_all(GC(Gtk.Label(label="Foreground/Background Adjusters"), width=2), direction=Gtk.DirectionType.RIGHT)
-    grid.attach_all(GC(fg_adjuster, width=2), GC(bg_adjuster, width=2), column=8)
+    grid.attach_all(GC(fg_adjuster, width=2), GC(bg_adjuster, width=2), column=8, row=1)
 
     # attach other adjusters
     grid.attach_all(l_adj, c_adj, row=3, direction=Gtk.DirectionType.RIGHT)
     grid.attach_all(h_adj, d_adj, row=4, direction=Gtk.DirectionType.RIGHT)
-    grid.attach_all(GC(action_bar, width=10))
+    grid.attach_all(GC(action_bar, width=2), column=8)
     grid.props.margin=10
 
     app = App("Color Thing", grid)
