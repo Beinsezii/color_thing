@@ -1,12 +1,29 @@
 #!/usr/bin/python3
 
+# TODO quick markdown before I forget. am going to sleep.
+# Make the different 'sections' of UI their own sub-Grid.
+# Reorganize so the fg/bg adjusters stretch to where the color previews currently are,
+# and move the color preview to the empty space below the 4 misc adjusters.
+# Put a new 'name' field where the color labels are. Used for file saves.
+# Possibly move name field and toolbar down to bottom again.
+
 import gi
+import re
+import exporters
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk  # noqa: F401
 from bszgw import Adjuster, AutoBox, Button, CheckButton, Entry, Grid, GridChild as GC, App
 from discount_babl import Color
+from importlib import import_module
+from pkgutil import iter_modules
 
+# puts every python module from the exporters namespace package into a list for polymorphism
+EXPORTERS = [
+    import_module('exporters.' + m.name) for m in iter_modules(exporters.__path__)
+]
+
+print(EXPORTERS)
 
 LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
 
@@ -25,16 +42,41 @@ class ColorAdjuster(Grid):
             w.adjustment.connect("value-changed", self.__set)
 
         self.attach_all(
-                self.L_adj,
-                self.C_adj,
-                self.H_adj,
-                direction=Gtk.DirectionType.RIGHT,
-                )
+            self.L_adj,
+            self.C_adj,
+            self.H_adj,
+            direction=Gtk.DirectionType.RIGHT,
+        )
 
         self.__set(None)
 
     def __set(self, widget):
         self.color.set_LCH(*[w.value for w in self.adjusters])
+
+
+def gen_term_hues(lightness=50, chroma=50, hue=0) -> list:
+    """Generates 6 hues for terminal colors."""
+    # just iterates the hue over the term order
+    return [Color().set_LCH(lightness, chroma, 60 * x + hue) for x in [0, 2, 1, 4, 5, 3]]
+
+
+def build_colors(fg: Color, bg: Color, lightness, chroma, hue, dim, oled) -> list:
+    """Generates all 16 colors from Fg, Bg, and lch offsets"""
+
+    colors = [bg] if not oled else [Color(0, 0, 0)]
+    colors += gen_term_hues(lightness, chroma, hue)
+
+    bgdim = list(bg.as_LCH())
+    bgdim[0] += dim
+    colors += [fg, Color().set_LCH(*bgdim)]
+
+    colors += gen_term_hues(lightness - dim, chroma, hue)
+
+    fgdim = list(fg.as_LCH())
+    fgdim[0] -= dim
+    colors.append(Color().set_LCH(*fgdim))
+
+    return colors
 
 
 def override_color(widget: Gtk.Widget, fg: Color = None, bg: Color = None):
@@ -56,31 +98,6 @@ textview text {{ {fg} {bg} }}
     widget.get_style_context().add_class("override")
 
 
-def gen_term_hues(lightness=50, chroma=50, hue=0) -> list:
-    """Generates 6 hues for terminal colors."""
-    # just iterates the hue over the term order
-    return [Color().set_LCH(lightness, chroma, 60*x+hue) for x in [0, 2, 1, 4, 5, 3]]
-
-
-def build_colors(fg: Color, bg: Color, lightness, chroma, hue, dim, oled) -> list:
-    """Generates all 16 colors from Fg, Bg, and lch offsets"""
-
-    colors = [bg] if not oled else [Color(0, 0, 0)]
-    colors += gen_term_hues(lightness, chroma, hue)
-
-    bgdim = list(bg.as_LCH())
-    bgdim[0] += dim
-    colors += [fg, Color().set_LCH(*bgdim)]
-
-    colors += gen_term_hues(lightness-dim, chroma, hue)
-
-    fgdim = list(fg.as_LCH())
-    fgdim[0] -= dim
-    colors.append(Color().set_LCH(*fgdim))
-
-    return colors
-
-
 def save_to_file(fg, bg, l, c, h, dim, oled):
     chooser = Gtk.FileChooserDialog()
     chooser.props.action = Gtk.FileChooserAction.SAVE
@@ -90,10 +107,10 @@ def save_to_file(fg, bg, l, c, h, dim, oled):
     response = chooser.run()
 
     if response == Gtk.ResponseType.ACCEPT:
-        data = list(fg.as_SRGB()) + list(bg.as_SRGB()) + [l, c, h, dim, oled]
+        data = list(fg.as_LCH()) + list(bg.as_LCH()) + [l, c, h, dim, oled]
         with open(chooser.get_filename(), mode='w', encoding="UTF-8") as saveto:
-            saveto.write("FG_R:{:.1f}\nFG_G:{:.1f}\nFG_B:{:.1f}\n"
-                         "BG_R:{:.1f}\nBG_G:{:.1f}\nBG_B:{:.1f}\n"
+            saveto.write("FG_L:{:.1f}\nFG_C:{:.1f}\nFG_H:{:.1f}\n"
+                         "BG_L:{:.1f}\nBG_C:{:.1f}\nBG_H:{:.1f}\n"
                          "L:{:.1f}\nC:{:.1f}\nH:{:.1f}\nDIM:{:.1f}\nOLED:{}".format(*data))
 
     chooser.destroy()
@@ -101,10 +118,86 @@ def save_to_file(fg, bg, l, c, h, dim, oled):
 
 def load_from_file():
     data = []
+    chooser = Gtk.FileChooserDialog()
+    chooser.props.action = Gtk.FileChooserAction.OPEN
+    chooser.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.ACCEPT)
+
+    response = chooser.run()
+
+    if response == Gtk.ResponseType.ACCEPT:
+        with open(chooser.get_filename(), mode='r', encoding="UTF-8") as loadfrom:
+            prefixes = [
+                "fg_l",
+                "fg_c",
+                "fg_h",
+                "bg_l",
+                "bg_c",
+                "bg_h",
+                "l",
+                "c",
+                "h",
+                "dim",
+            ]
+            # matches one of the prefixes followed by : and any number of spaces
+            # then any number size with optional preceding hyphen or single decimal
+            # and finally a newline immediately after.
+            # Should be eval-safe
+            regex = "".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
+            regex += r"oled: *(true|false)"
+            match = re.match(regex, loadfrom.read().casefold())
+
+            if match is None:
+                print("RE FAIL")
+            else:
+                for x in match.groups()[:-1]:
+                    data.append(eval(x))
+                data.append(eval(match.groups()[-1].capitalize()))
+
+    chooser.destroy()
     return data
 
 
-def main():
+def export(*data):
+    check_buttons = [CheckButton(e.NAME, False) for e in EXPORTERS]
+
+    grid = Grid()
+    grid.props.margin = 5
+    grid.attach_all(*check_buttons)
+
+    dialog = Gtk.Dialog()
+    dialog.get_content_area().add(grid)
+    dialog.get_content_area().show_all()
+
+    dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_SAVE, Gtk.ResponseType.ACCEPT)
+
+    response = dialog.run()
+
+    if response == Gtk.ResponseType.ACCEPT:
+        confirm = Gtk.Dialog()
+
+        functions = []
+        create_text = "The following files will be created:\n"
+        overwrite_text = "The following files will be OVERWRITTEN:\n"
+
+        for num, cb in enumerate(check_buttons):
+            if cb.value:
+                functions.append(EXPORTERS[num].EXPORT)
+
+        confirm.get_content_area().add(Gtk.Label(label=create_text + '\n' + overwrite_text))
+        confirm.get_content_area().show_all()
+        confirm.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.ACCEPT)
+        response = confirm.run()
+
+        if response == Gtk.ResponseType.ACCEPT:
+            for fn in functions:
+                fn(*data)
+
+        confirm.destroy()
+
+    dialog.destroy()
+
+
+def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of making a class and writing self everywhere
     # Main text boxes
     main_box = Entry(label="Foreground/Background", value=LOREM_IPSUM, min_height=150)
     main_box.entry.props.wrap_mode = Gtk.WrapMode.WORD
@@ -168,9 +261,18 @@ def main():
 
     def on_load(widget):
         data = load_from_file()
+        widgets = fg_adjuster.adjusters + bg_adjuster.adjusters + [
+            l_adj,
+            c_adj,
+            h_adj,
+            d_adj,
+            oled_toggle,
+        ]
+        for num, var in enumerate(data):
+            widgets[num].value = var
 
     def on_export(widget):
-        pass
+        export(*get_vals())
 
     # Pickers
     fg_adjuster = ColorAdjuster(Color(1, 1, 1), "FG")
@@ -182,7 +284,7 @@ def main():
     h_adj = Adjuster.new("Colors Hue Offset", 20, -180, 180, 5, 15, 1)
     d_adj = Adjuster.new("Dim/Difference in Contrasts", 20, -100, 100, 5, 10, 1)
 
-    for w in fg_adjuster.adjusters+bg_adjuster.adjusters + [l_adj, c_adj, h_adj, d_adj]:
+    for w in fg_adjuster.adjusters + bg_adjuster.adjusters + [l_adj, c_adj, h_adj, d_adj]:
         w.adjustment.connect("value-changed", on_adj_change)
 
     save_button = Button("Save", on_save, tooltip="Save current vals to file")
@@ -197,14 +299,14 @@ def main():
 
     def get_vals():
         return [
-                fg_adjuster.color,
-                bg_adjuster.color,
-                l_adj.value,
-                c_adj.value,
-                h_adj.value,
-                d_adj.value,
-                oled_toggle.value,
-                ]
+            fg_adjuster.color,
+            bg_adjuster.color,
+            l_adj.value,
+            c_adj.value,
+            h_adj.value,
+            d_adj.value,
+            oled_toggle.value,
+        ]
 
     grid = Grid()
     # attach displays
@@ -220,7 +322,7 @@ def main():
     grid.attach_all(l_adj, c_adj, row=3, direction=Gtk.DirectionType.RIGHT)
     grid.attach_all(h_adj, d_adj, row=4, direction=Gtk.DirectionType.RIGHT)
     grid.attach_all(GC(action_bar, width=2), column=8)
-    grid.props.margin=10
+    grid.props.margin = 10
 
     app = App("Color Thing", grid)
     on_adj_change(None)
