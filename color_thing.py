@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 
-# TODO quick markdown before I forget. am going to sleep.
-# Make the different 'sections' of UI their own sub-Grid.
-# Reorganize so the fg/bg adjusters stretch to where the color previews currently are,
-# and move the color preview to the empty space below the 4 misc adjusters.
-# Put a new 'name' field where the color labels are. Used for file saves.
-# Possibly move name field and toolbar down to bottom again.
+# TODO
+# Try window class. Was thinking of having the vals be props,
+# eliminating the get_vals() fn and the passing of args everywhere except to the exporters.
+
+# Add 'accent color' chooser, as eventual targets like Oomox will need it.
+# would be cool to have a 'click the color' thing but I don't know how easy that is.
+# Some kind of toggle-grid maybe? ....or just change it from labels to buttons lol.
 
 import gi
 import re
