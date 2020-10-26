@@ -9,6 +9,7 @@
 
 import gi
 import re
+import os
 import exporters
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
@@ -23,9 +24,9 @@ EXPORTERS = [
     import_module('exporters.' + m.name) for m in iter_modules(exporters.__path__)
 ]
 
-print(EXPORTERS)
-
 LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+
+NAME_CHARS = r"[a-zA-Z0-9 _-]+"
 
 
 class ColorAdjuster(Grid):
@@ -98,7 +99,11 @@ textview text {{ {fg} {bg} }}
     widget.get_style_context().add_class("override")
 
 
-def save_to_file(fg, bg, l, c, h, dim, oled):
+def name_valid(name: str) -> bool:  # questionable use since I save the re
+    return re.match(f"^{NAME_CHARS}$", name) is not None
+
+
+def save_to_file(fg, bg, l, c, h, dim, oled, name):
     chooser = Gtk.FileChooserDialog()
     chooser.props.action = Gtk.FileChooserAction.SAVE
     chooser.props.do_overwrite_confirmation = True
@@ -107,9 +112,10 @@ def save_to_file(fg, bg, l, c, h, dim, oled):
     response = chooser.run()
 
     if response == Gtk.ResponseType.ACCEPT:
-        data = list(fg.as_LCH()) + list(bg.as_LCH()) + [l, c, h, dim, oled]
+        data = [name] + list(fg.as_LCH()) + list(bg.as_LCH()) + [l, c, h, dim, oled]
         with open(chooser.get_filename(), mode='w', encoding="UTF-8") as saveto:
-            saveto.write("FG_L:{:.1f}\nFG_C:{:.1f}\nFG_H:{:.1f}\n"
+            saveto.write("Name:{}\n"
+                         "FG_L:{:.1f}\nFG_C:{:.1f}\nFG_H:{:.1f}\n"
                          "BG_L:{:.1f}\nBG_C:{:.1f}\nBG_H:{:.1f}\n"
                          "L:{:.1f}\nC:{:.1f}\nH:{:.1f}\nDIM:{:.1f}\nOLED:{}".format(*data))
 
@@ -126,6 +132,7 @@ def load_from_file():
 
     if response == Gtk.ResponseType.ACCEPT:
         with open(chooser.get_filename(), mode='r', encoding="UTF-8") as loadfrom:
+            string = loadfrom.read()
             prefixes = [
                 "fg_l",
                 "fg_c",
@@ -142,14 +149,16 @@ def load_from_file():
             # then any number size with optional preceding hyphen or single decimal
             # and finally a newline immediately after.
             # Should be eval-safe
-            regex = "".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
+            regex = f"name: *({NAME_CHARS})\n"
+            regex += r"".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
             regex += r"oled: *(true|false)"
-            match = re.match(regex, loadfrom.read().casefold())
+            match = re.match(regex, string.casefold())
 
             if match is None:
                 print("RE FAIL")
             else:
-                for x in match.groups()[:-1]:
+                data.append(string[match.start(1):match.end(1)])
+                for x in match.groups()[1:-1]:
                     data.append(eval(x))
                 data.append(eval(match.groups()[-1].capitalize()))
 
@@ -157,7 +166,7 @@ def load_from_file():
     return data
 
 
-def export(*data):
+def export(fg, bg, l, c, h, dim, oled, name):
     check_buttons = [CheckButton(e.NAME, False) for e in EXPORTERS]
 
     grid = Grid()
@@ -176,12 +185,20 @@ def export(*data):
         confirm = Gtk.Dialog()
 
         functions = []
+        filenames = []
         create_text = "The following files will be created:\n"
         overwrite_text = "The following files will be OVERWRITTEN:\n"
 
         for num, cb in enumerate(check_buttons):
             if cb.value:
                 functions.append(EXPORTERS[num].EXPORT)
+                filenames.append(os.path.realpath(f'./exported/{name}' + EXPORTERS[num].FORMAT))
+
+        for f in filenames:
+            if os.path.exists(f):
+                overwrite_text += f + '\n'
+            else:
+                create_text += f + '\n'
 
         confirm.get_content_area().add(Gtk.Label(label=create_text + '\n' + overwrite_text))
         confirm.get_content_area().show_all()
@@ -189,8 +206,11 @@ def export(*data):
         response = confirm.run()
 
         if response == Gtk.ResponseType.ACCEPT:
-            for fn in functions:
-                fn(*data)
+            if not os.path.exists('./exported/'):
+                os.mkdir('./exported/')
+            for num, fn in enumerate(functions):
+                with open(filenames[num], mode='wb') as target:
+                    target.write(fn(fg, bg, l, c, h, dim, oled, name))
 
         confirm.destroy()
 
@@ -199,12 +219,12 @@ def export(*data):
 
 def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of making a class and writing self everywhere
     # Main text boxes
-    main_box = Entry(label="Foreground/Background", value=LOREM_IPSUM, min_height=150)
+    main_box = Entry(label="Foreground/Background", value=LOREM_IPSUM, min_height=150, min_width=650)
     main_box.entry.props.wrap_mode = Gtk.WrapMode.WORD
     main_box.entry.props.editable = False
     main_box.entry.provider = Gtk.CssProvider()
 
-    dim_box = Entry(label="Foreground2/Background2", value=LOREM_IPSUM, min_height=150)
+    dim_box = Entry(label="Foreground2/Background2", value=LOREM_IPSUM, min_height=150, min_width=650)
     dim_box.entry.props.wrap_mode = Gtk.WrapMode.WORD
     dim_box.entry.props.editable = False
     dim_box.entry.provider = Gtk.CssProvider()
@@ -231,11 +251,18 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         Gtk.Label(label=f"color{x + 8}") for x in range(len(term_color_labels))
     ]
 
+    colors_grid = Grid()
+    colors_grid.attach_all(*term_color_labels, direction=Gtk.DirectionType.RIGHT)
+    colors_grid.attach_all(*term_colors_bright, row=1, direction=Gtk.DirectionType.RIGHT)
+    colors_grid.attach_all(*term_colors_dim, row=2, direction=Gtk.DirectionType.RIGHT)
+
     term_colors = term_colors_bright + term_colors_dim
 
     # add providers as prop for easy management. discount polymorphism
-    for widget in [main_box] + term_colors_bright + term_colors_dim:
+    for widget in term_colors:
         widget.provider = Gtk.CssProvider()
+        widget.props.height_request = 75
+        widget.props.width_request = 75
 
     def set_all_colors(colors: list):
         # term color labels
@@ -254,14 +281,14 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         override_color(dim_box.entry, fg=colors[15], bg=colors[8])
 
     def on_adj_change(widget):
-        set_all_colors(build_colors(*get_vals()))
+        set_all_colors(build_colors(*get_vals()[:-1]))
 
     def on_save(widget):
         save_to_file(*get_vals())
 
     def on_load(widget):
         data = load_from_file()
-        widgets = fg_adjuster.adjusters + bg_adjuster.adjusters + [
+        widgets = [name_entry] + fg_adjuster.adjusters + bg_adjuster.adjusters + [
             l_adj,
             c_adj,
             h_adj,
@@ -283,9 +310,26 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     c_adj = Adjuster.new("Colors Chroma", 50, -100, 100, 5, 10, 1)
     h_adj = Adjuster.new("Colors Hue Offset", 20, -180, 180, 5, 15, 1)
     d_adj = Adjuster.new("Dim/Difference in Contrasts", 20, -100, 100, 5, 10, 1)
+    color_adj_grid = Grid()
+    color_adj_grid.attach_all(l_adj, h_adj)
+    color_adj_grid.attach_all(c_adj, d_adj, column=1)
 
     for w in fg_adjuster.adjusters + bg_adjuster.adjusters + [l_adj, c_adj, h_adj, d_adj]:
         w.adjustment.connect("value-changed", on_adj_change)
+
+    def on_ne_change(*args):
+        if name_valid(name_entry.value):
+            save_button.props.sensitive = True
+            export_button.props.sensitive = True
+        else:
+            save_button.props.sensitive = False
+            export_button.props.sensitive = False
+
+    name_entry = Entry("Theme Name:", "Untitled Theme", multi_line=False)
+    name_entry.props.orientation = 0
+    name_entry.props.spacing = 5
+    name_entry.text_buffer.connect("inserted-text", on_ne_change)
+    name_entry.text_buffer.connect("deleted-text", on_ne_change)
 
     save_button = Button("Save", on_save, tooltip="Save current vals to file")
     load_button = Button("Load", on_load, tooltip="Load vals from file")
@@ -306,22 +350,24 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
             h_adj.value,
             d_adj.value,
             oled_toggle.value,
+            name_entry.value,
         ]
 
     grid = Grid()
-    # attach displays
-    grid.attach_all(*term_color_labels, direction=Gtk.DirectionType.RIGHT)
-    grid.attach_all(*term_colors_bright, row=1, direction=Gtk.DirectionType.RIGHT)
-    grid.attach_all(*term_colors_dim, row=2, direction=Gtk.DirectionType.RIGHT)
-    grid.attach_all(GC(main_box, height=2, width=8), GC(dim_box, height=2, width=8))
 
-    # attach janky-ass custom fg/bg adjusters
-    grid.attach_all(GC(fg_adjuster, width=2), GC(bg_adjuster, width=2), column=8, row=1)
-
-    # attach other adjusters
-    grid.attach_all(l_adj, c_adj, row=3, direction=Gtk.DirectionType.RIGHT)
-    grid.attach_all(h_adj, d_adj, row=4, direction=Gtk.DirectionType.RIGHT)
-    grid.attach_all(GC(action_bar, width=2), column=8)
+    grid.attach_all(
+        GC(fg_adjuster, width=2),
+        GC(bg_adjuster, width=2),
+        main_box,
+        dim_box,
+        name_entry
+    )
+    grid.attach_all(
+        color_adj_grid,
+        colors_grid,
+        action_bar,
+        column=1
+    )
     grid.props.margin = 10
 
     app = App("Color Thing", grid)

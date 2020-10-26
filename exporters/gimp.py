@@ -2,4 +2,4 @@ NAME="GIMP Palette"
 FORMAT=".gpl"
 
 def EXPORT(*args):
-    print(f"exporting GIMP palette... {args}")
+    return bytes(f"exporting GIMP palette... {args}", encoding="UTF-8")
