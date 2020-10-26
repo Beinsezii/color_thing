@@ -109,6 +109,7 @@ def save_to_file(fg, bg, l, c, h, dim, oled, name):
     chooser.props.action = Gtk.FileChooserAction.SAVE
     chooser.props.do_overwrite_confirmation = True
     chooser.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_SAVE, Gtk.ResponseType.ACCEPT)
+    chooser.set_current_name(name + '.color_thing')
 
     response = chooser.run()
 
