@@ -52,10 +52,11 @@ class ColorAdjuster(Grid):
 
 
 class Display(Gtk.Label):
-    def __init__(self, label, value):
+    def __init__(self, label, value, tooltip=""):
         super(Display, self).__init__(label='oops')
         self.__label = label
         self.provider = Gtk.CssProvider()
+        self.props.tooltip_text = tooltip
         self.value = value
 
     @property
@@ -182,7 +183,7 @@ def load_from_file():
     return data
 
 
-def export(fg, bg, l, c, h, dim, oled, name, accent):
+def export(colors, name, accent):
     check_buttons = [CheckButton(e.NAME, False) for e in EXPORTERS]
 
     grid = Grid()
@@ -226,7 +227,7 @@ def export(fg, bg, l, c, h, dim, oled, name, accent):
                 os.mkdir('./exported/')
             for num, fn in enumerate(functions):
                 with open(filenames[num], mode='wb') as target:
-                    target.write(fn(fg, bg, l, c, h, dim, oled, name, accent))
+                    target.write(fn(colors, name, accent))
 
         confirm.destroy()
 
@@ -245,7 +246,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     dim_box.entry.props.editable = False
     dim_box.entry.provider = Gtk.CssProvider()
 
-    accent_display = Display("Accent Color", 7)
+    accent_display = Display("Accent Color", 7, "Used for accents during export.\nClick colors to set.")
 
     def on_color_button(widget, num):
         accent_display.value = num[0]
@@ -321,9 +322,11 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         ]
         for num, var in enumerate(data):
             widgets[num].value = var
+        # force re-load to doubly-double-check.
+        on_adj_change(None)
 
     def on_export(widget):
-        export(*get_vals())
+        export(build_colors(*get_vals()[:-2]), *get_vals()[-2:])
 
     # Pickers
     fg_adjuster = ColorAdjuster(Color(1, 1, 1), "FG")
@@ -360,8 +363,6 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     oled_toggle = CheckButton("OLED Mode", False, tooltip="Make the BG pure black")
     export_button = Button("Export", on_export, tooltip="Export palette")
     action_bar = AutoBox([save_button, load_button, export_button, oled_toggle], 5, 5, 0)
-    # action_bar = Grid()
-    # action_bar.attach_all(save_button, load_button, oled_toggle, export_button, direction=Gtk.DirectionType.RIGHT)
 
     oled_toggle.connect('toggled', on_adj_change)
 
@@ -385,7 +386,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         GC(bg_adjuster, width=2),
         main_box,
         dim_box,
-        AutoBox([name_entry, accent_display], orientation=0)
+        AutoBox([name_entry, accent_display], 5, 5, 0)
     )
     grid.attach_all(
         color_adj_grid,
