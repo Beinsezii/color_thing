@@ -55,6 +55,7 @@ class Display(Gtk.Label):
     def __init__(self, label, value):
         super(Display, self).__init__(label='oops')
         self.__label = label
+        self.provider = Gtk.CssProvider()
         self.value = value
 
     @property
@@ -248,6 +249,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
 
     def on_color_button(widget, num):
         accent_display.value = num[0]
+        on_adj_change(widget)
 
     # Labels
     term_color_labels = [
@@ -299,6 +301,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         # main boxes
         override_color(main_box.entry, fg=colors[7], bg=colors[0])
         override_color(dim_box.entry, fg=colors[15], bg=colors[8])
+        override_color(accent_display, fg=colors[0], bg=colors[accent_display.value])
 
     def on_adj_change(widget):
         set_all_colors(build_colors(*get_vals()[:-2]))
