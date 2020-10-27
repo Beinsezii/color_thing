@@ -1,12 +1,7 @@
 #!/usr/bin/python3
 
 # TODO
-# Try window class. Was thinking of having the vals be props,
-# eliminating the get_vals() fn and the passing of args everywhere except to the exporters.
-
-# Add 'accent color' chooser, as eventual targets like Oomox will need it.
-# would be cool to have a 'click the color' thing but I don't know how easy that is.
-# Some kind of toggle-grid maybe? ....or just change it from labels to buttons lol.
+# Try object-oriented builder instead of just using main.
 
 import gi
 import re
@@ -54,6 +49,22 @@ class ColorAdjuster(Grid):
 
     def __set(self, widget):
         self.color.set_LCH(*[w.value for w in self.adjusters])
+
+
+class Display(Gtk.Label):
+    def __init__(self, label, value):
+        super(Display, self).__init__(label='oops')
+        self.__label = label
+        self.value = value
+
+    @property
+    def value(self):
+        return self.__value
+
+    @value.setter
+    def value(self, new):
+        self.__value = new
+        self.props.label = "{}: {}".format(self.__label, self.__value)
 
 
 def gen_term_hues(lightness=50, chroma=50, hue=0) -> list:
@@ -104,7 +115,7 @@ def name_valid(name: str) -> bool:  # questionable use since I save the re
     return re.match(f"^{NAME_CHARS}$", name) is not None
 
 
-def save_to_file(fg, bg, l, c, h, dim, oled, name):
+def save_to_file(fg, bg, l, c, h, dim, oled, name, accent):
     chooser = Gtk.FileChooserDialog()
     chooser.props.action = Gtk.FileChooserAction.SAVE
     chooser.props.do_overwrite_confirmation = True
@@ -114,12 +125,12 @@ def save_to_file(fg, bg, l, c, h, dim, oled, name):
     response = chooser.run()
 
     if response == Gtk.ResponseType.ACCEPT:
-        data = [name] + list(fg.as_LCH()) + list(bg.as_LCH()) + [l, c, h, dim, oled]
+        data = [name] + list(fg.as_LCH()) + list(bg.as_LCH()) + [l, c, h, dim, oled, accent]
         with open(chooser.get_filename(), mode='w', encoding="UTF-8") as saveto:
-            saveto.write("Name:{}\n"
+            saveto.write("NAME:{}\n"
                          "FG_L:{:.1f}\nFG_C:{:.1f}\nFG_H:{:.1f}\n"
                          "BG_L:{:.1f}\nBG_C:{:.1f}\nBG_H:{:.1f}\n"
-                         "L:{:.1f}\nC:{:.1f}\nH:{:.1f}\nDIM:{:.1f}\nOLED:{}".format(*data))
+                         "L:{:.1f}\nC:{:.1f}\nH:{:.1f}\nDIM:{:.1f}\nOLED:{}\nACCENT:{}".format(*data))
 
     chooser.destroy()
 
@@ -153,22 +164,24 @@ def load_from_file():
             # Should be eval-safe
             regex = f"name: *({NAME_CHARS})\n"
             regex += r"".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
-            regex += r"oled: *(true|false)"
+            regex += r"oled: *(true|false)\n"
+            regex += r"accent: *(1[0-5]|[0-9])"
             match = re.match(regex, string.casefold())
 
             if match is None:
                 print("RE FAIL")
             else:
                 data.append(string[match.start(1):match.end(1)])
-                for x in match.groups()[1:-1]:
+                for x in match.groups()[1:-2]:
                     data.append(eval(x))
-                data.append(eval(match.groups()[-1].capitalize()))
+                data.append(eval(match.groups()[-2].capitalize()))
+                data.append(eval(match.groups()[-1]))
 
     chooser.destroy()
     return data
 
 
-def export(fg, bg, l, c, h, dim, oled, name):
+def export(fg, bg, l, c, h, dim, oled, name, accent):
     check_buttons = [CheckButton(e.NAME, False) for e in EXPORTERS]
 
     grid = Grid()
@@ -212,7 +225,7 @@ def export(fg, bg, l, c, h, dim, oled, name):
                 os.mkdir('./exported/')
             for num, fn in enumerate(functions):
                 with open(filenames[num], mode='wb') as target:
-                    target.write(fn(fg, bg, l, c, h, dim, oled, name))
+                    target.write(fn(fg, bg, l, c, h, dim, oled, name, accent))
 
         confirm.destroy()
 
@@ -231,6 +244,11 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     dim_box.entry.props.editable = False
     dim_box.entry.provider = Gtk.CssProvider()
 
+    accent_display = Display("Accent Color", 7)
+
+    def on_color_button(widget, num):
+        accent_display.value = num[0]
+
     # Labels
     term_color_labels = [
         Gtk.Label(label="Black"),
@@ -245,12 +263,12 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
 
     # Bright [term 0-7]
     term_colors_bright = [
-        Gtk.Label(label=f"color{x}") for x in range(len(term_color_labels))
+        Button(f"color{x}", on_color_button, x) for x in range(8)
     ]
 
     # Dim [term 8-15]
     term_colors_dim = [
-        Gtk.Label(label=f"color{x + 8}") for x in range(len(term_color_labels))
+        Button(f"color{x + 8}", on_color_button, x + 8) for x in range(8)
     ]
 
     colors_grid = Grid()
@@ -283,7 +301,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         override_color(dim_box.entry, fg=colors[15], bg=colors[8])
 
     def on_adj_change(widget):
-        set_all_colors(build_colors(*get_vals()[:-1]))
+        set_all_colors(build_colors(*get_vals()[:-2]))
 
     def on_save(widget):
         save_to_file(*get_vals())
@@ -296,6 +314,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
             h_adj,
             d_adj,
             oled_toggle,
+            accent_display
         ]
         for num, var in enumerate(data):
             widgets[num].value = var
@@ -353,6 +372,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
             d_adj.value,
             oled_toggle.value,
             name_entry.value,
+            accent_display.value,
         ]
 
     grid = Grid()
@@ -362,7 +382,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         GC(bg_adjuster, width=2),
         main_box,
         dim_box,
-        name_entry
+        AutoBox([name_entry, accent_display], orientation=0)
     )
     grid.attach_all(
         color_adj_grid,
