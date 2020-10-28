@@ -209,7 +209,7 @@ def export(colors, name, accent):
         for num, cb in enumerate(check_buttons):
             if cb.value:
                 functions.append(EXPORTERS[num].EXPORT)
-                filenames.append(os.path.realpath(f'./exported/{name}' + EXPORTERS[num].FORMAT))
+                filenames.append(os.path.realpath(f'./{name}/' + EXPORTERS[num].FORMAT.format(name=name)))
 
         for f in filenames:
             if os.path.exists(f):
@@ -223,8 +223,8 @@ def export(colors, name, accent):
         response = confirm.run()
 
         if response == Gtk.ResponseType.ACCEPT:
-            if not os.path.exists('./exported/'):
-                os.mkdir('./exported/')
+            if not os.path.exists(f'./{name}/') and len(filenames) > 0:
+                os.mkdir(f'./{name}/')
             for num, fn in enumerate(functions):
                 with open(filenames[num], mode='wb') as target:
                     target.write(fn(colors, name, accent))

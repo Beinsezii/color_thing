@@ -1,5 +1,5 @@
 NAME = "GIMP Palette"
-FORMAT = ".gpl"
+FORMAT = "{name}.gpl"
 
 
 def EXPORT(colors: list, name: str, accent: int) -> bytes:
