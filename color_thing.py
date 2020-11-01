@@ -33,8 +33,8 @@ class ColorAdjuster(Grid):
         self.color_alt = Color()
         vals = list(vals) + [0] * 6
         L, C, H, LA, CA, HA = vals[:6]
-        self.L_adj = Adjuster.new(f'{label} Lightness', L, -100, 100, 5, 10, 1)
-        self.C_adj = Adjuster.new(f'{label} Chroma', C, -100, 100, 5, 10, 1)
+        self.L_adj = Adjuster.new(f'{label} Lightness', L, 0, 100, 5, 10, 1)
+        self.C_adj = Adjuster.new(f'{label} Chroma', C, 0, 100, 5, 10, 1)
         self.H_adj = Adjuster.new(f'{label} Hue', H, 0, 360, 5, 15, 1)
         self.L_alt_adj = Adjuster.new(f'{label} Alt Lightness', LA, -100, 100, 5, 10, 1)
         self.C_alt_adj = Adjuster.new(f'{label} Alt Chroma', CA, -100, 100, 5, 10, 1)
@@ -381,8 +381,8 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     bg_adjuster = ColorAdjuster("BG", 0, 0, 0, 10)
 
     # Adjusters
-    l_adj = Adjuster.new("Colors Lightness", 50, -100, 100, 5, 10, 1)
-    c_adj = Adjuster.new("Colors Chroma", 50, -100, 100, 5, 10, 1)
+    l_adj = Adjuster.new("Colors Lightness", 50, 0, 100, 5, 10, 1)
+    c_adj = Adjuster.new("Colors Chroma", 50, 0, 100, 5, 10, 1)
     h_adj = Adjuster.new("Colors Hue Offset", 20, -180, 180, 5, 15, 1)
     l2_adj = Adjuster.new("Colors Alt Lightness", -20, -100, 100, 5, 10, 1)
     c2_adj = Adjuster.new("Colors Alt Chroma", 0, -100, 100, 5, 10, 1)
