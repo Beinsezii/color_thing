@@ -1,5 +1,5 @@
 NAME = "Rofi"
-FORMAT = "config.rasi"
+FORMAT = "{name}.rasi"
 
 
 def EXPORT(colors: list, name: str, accent: int) -> bytes:
