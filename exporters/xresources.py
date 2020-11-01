@@ -7,7 +7,7 @@ def EXPORT(colors: list, name: str, accent: int) -> bytes:
     data = f"""\
 *background:     {colors[0]}
 *foreground:     {colors[7]}
-*highlightColor: {colors[15]}
+*highlightColor: {colors[8]}
 *cursorColor:    {colors[accent]}
 """
     for num, c in enumerate(colors):

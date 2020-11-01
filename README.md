@@ -12,6 +12,7 @@ A thing that makes coordinated color themes.
 ### Features
 * Exporters for various programs
   * GIMP Palette
+  * i3
   * Rofi
   * .Xresources
 * LCH color space for prettiness
@@ -21,7 +22,6 @@ A thing that makes coordinated color themes.
 ### To Do
 * Exporters
   * Alacritty
-  * i3
   * Oomox
   * Vim
   * ???
