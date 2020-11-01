@@ -39,6 +39,9 @@ listview {
 element {
     padding: 5px;
 }
+elemt-icon{
+    size: 2ch;
+}
 element.normal.normal {
     background-color: @bg;
     text-color:       @fg;
