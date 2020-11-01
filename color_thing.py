@@ -10,7 +10,7 @@ import exporters
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk  # noqa: F401
-from bszgw import Adjuster, AutoBox, Button, CheckButton, Entry, Grid, GridChild as GC, App
+from bszgw import Adjuster, AutoBox, Button, CheckButton, Entry, Grid, GridChild as GC, App, Message
 from discount_babl import Color
 from importlib import import_module
 from pkgutil import iter_modules
@@ -146,39 +146,42 @@ def load_from_file():
     response = chooser.run()
 
     if response == Gtk.ResponseType.ACCEPT:
-        with open(chooser.get_filename(), mode='r', encoding="UTF-8") as loadfrom:
-            string = loadfrom.read()
-            prefixes = [
-                "fg_l",
-                "fg_c",
-                "fg_h",
-                "bg_l",
-                "bg_c",
-                "bg_h",
-                "l",
-                "c",
-                "h",
-                "dim",
-            ]
-            # matches one of the prefixes followed by : and any number of spaces
-            # then any number size with optional preceding hyphen or single decimal
-            # and finally a newline immediately after.
-            # Should be eval-safe
-            regex = f"name: *({NAME_CHARS})\n"
-            regex += r"".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
-            regex += r"oled: *(true|false)\n"
-            regex += r"accent: *(1[0-5]|[0-9])"
-            match = re.match(regex, string.casefold())
+        try:
+            with open(chooser.get_filename(), mode='r', encoding="UTF-8") as loadfrom:
+                string = loadfrom.read()
+                prefixes = [
+                    "fg_l",
+                    "fg_c",
+                    "fg_h",
+                    "bg_l",
+                    "bg_c",
+                    "bg_h",
+                    "l",
+                    "c",
+                    "h",
+                    "dim",
+                ]
+                # matches one of the prefixes followed by : and any number of spaces
+                # then any number size with optional preceding hyphen or single decimal
+                # and finally a newline immediately after.
+                # Should be eval-safe
+                regex = f"name: *({NAME_CHARS})\n"
+                regex += r"".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
+                regex += r"oled: *(true|false)\n"
+                regex += r"accent: *(1[0-5]|[0-9])"
+                match = re.match(regex, string.casefold())
 
-            if match is None:
-                print("RE FAIL")
-            else:
-                data.append(string[match.start(1):match.end(1)])
-                for x in match.groups()[1:-2]:
-                    data.append(eval(x))
-                data.append(eval(match.groups()[-2].capitalize()))
-                data.append(eval(match.groups()[-1]))
+                if match is None:
+                    Message('Invalid File Content')
+                else:
+                    data.append(string[match.start(1):match.end(1)])
+                    for x in match.groups()[1:-2]:
+                        data.append(eval(x))
+                    data.append(eval(match.groups()[-2].capitalize()))
+                    data.append(eval(match.groups()[-1]))
 
+        except UnicodeDecodeError:
+            Message('Invalid File Type')
     chooser.destroy()
     return data
 
@@ -200,6 +203,7 @@ def export(colors, name, accent):
 
     if response == Gtk.ResponseType.ACCEPT:
         confirm = Gtk.Dialog()
+        confirm.props.modal = True
 
         functions = []
         filenames = []
