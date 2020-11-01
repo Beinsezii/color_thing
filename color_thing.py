@@ -30,25 +30,34 @@ class ColorAdjuster(Grid):
         super(ColorAdjuster, self).__init__()
 
         self.color = color
+        self.color_alt = Color()
         L, C, H = self.color.as_LCH()
-        self.L_adj = Adjuster.new(f'{label} Lightness', L, -100, 200, 5, 10, 1)
-        self.C_adj = Adjuster.new(f'{label} Chroma', C, -100, 200, 5, 10, 1)
+        self.L_adj = Adjuster.new(f'{label} Lightness', L, -100, 100, 5, 10, 1)
+        self.C_adj = Adjuster.new(f'{label} Chroma', C, -100, 100, 5, 10, 1)
         self.H_adj = Adjuster.new(f'{label} Hue', H, 0, 360, 5, 15, 1)
-        self.adjusters = [self.L_adj, self.C_adj, self.H_adj]
+        self.L_alt_adj = Adjuster.new(f'{label} Alt Lightness', -20, -100, 100, 5, 10, 1)
+        self.C_alt_adj = Adjuster.new(f'{label} Alt Chroma', 0, -100, 100, 5, 10, 1)
+        self.H_alt_adj = Adjuster.new(f'{label} Alt Hue', 0, -180, 180, 5, 15, 1)
+        self.adjusters = [self.L_adj, self.C_adj, self.H_adj, self.L_alt_adj, self.C_alt_adj, self.H_alt_adj]
         for w in self.adjusters:
             w.adjustment.connect("value-changed", self.__set)
 
         self.attach_all(
-            self.L_adj,
-            self.C_adj,
-            self.H_adj,
+            *self.adjusters[:3],
             direction=Gtk.DirectionType.RIGHT,
+        )
+        self.attach_all(
+            *self.adjusters[3:],
+            direction=Gtk.DirectionType.RIGHT,
+            row=1
         )
 
         self.__set(None)
 
     def __set(self, widget):
-        self.color.set_LCH(*[w.value for w in self.adjusters])
+        l, c, h, loff, coff, hoff = [w.value for w in self.adjusters]
+        self.color.set_LCH(l, c, h)
+        self.color_alt.set_LCH(l + loff, c + coff, h + hoff)
 
 
 class Display(Gtk.Label):
@@ -75,21 +84,28 @@ def gen_term_hues(lightness=50, chroma=50, hue=0) -> list:
     return [Color().set_LCH(lightness, chroma, 60 * x + hue) for x in [0, 2, 1, 4, 5, 3]]
 
 
-def build_colors(fg: Color, bg: Color, lightness, chroma, hue, dim, oled) -> list:
+def build_colors(
+    fg: Color,
+    bg: Color,
+    fg_alt: Color,
+    bg_alt: Color,
+    lightness,
+    chroma,
+    hue,
+    lightness_alt,
+    chroma_alt,
+    hue_alt,
+) -> list:
     """Generates all 16 colors from Fg, Bg, and lch offsets"""
 
-    colors = [bg] if not oled else [Color(0, 0, 0)]
+    colors = [bg]
     colors += gen_term_hues(lightness, chroma, hue)
 
-    bgdim = list(bg.as_LCH())
-    bgdim[0] += dim
-    colors += [fg, Color().set_LCH(*bgdim)]
+    colors += [fg, bg_alt]
 
-    colors += gen_term_hues(lightness - dim, chroma, hue)
+    colors += gen_term_hues(lightness + lightness_alt, chroma + chroma_alt, hue + hue_alt)
 
-    fgdim = list(fg.as_LCH())
-    fgdim[0] -= dim
-    colors.append(Color().set_LCH(*fgdim))
+    colors += [fg_alt]
 
     return colors
 
@@ -117,7 +133,9 @@ def name_valid(name: str) -> bool:  # questionable use since I save the re
     return re.match(f"^{NAME_CHARS}$", name) is not None
 
 
-def save_to_file(fg, bg, l, c, h, dim, oled, name, accent):
+def save_to_file(*args):
+    args = list(args)
+    name = args.pop(-2)
     chooser = Gtk.FileChooserDialog()
     chooser.props.action = Gtk.FileChooserAction.SAVE
     chooser.props.do_overwrite_confirmation = True
@@ -127,12 +145,15 @@ def save_to_file(fg, bg, l, c, h, dim, oled, name, accent):
     response = chooser.run()
 
     if response == Gtk.ResponseType.ACCEPT:
-        data = [name] + list(fg.as_LCH()) + list(bg.as_LCH()) + [l, c, h, dim, oled, accent]
         with open(chooser.get_filename(), mode='w', encoding="UTF-8") as saveto:
             saveto.write("NAME:{}\n"
                          "FG_L:{:.1f}\nFG_C:{:.1f}\nFG_H:{:.1f}\n"
+                         "FG_ALT_L:{:.1f}\nFG_ALT_C:{:.1f}\nFG_ALT_H:{:.1f}\n"
                          "BG_L:{:.1f}\nBG_C:{:.1f}\nBG_H:{:.1f}\n"
-                         "L:{:.1f}\nC:{:.1f}\nH:{:.1f}\nDIM:{:.1f}\nOLED:{}\nACCENT:{}".format(*data))
+                         "BG_ALT_L:{:.1f}\nBG_ALT_C:{:.1f}\nBG_ALT_H:{:.1f}\n"
+                         "L:{:.1f}\nC:{:.1f}\nH:{:.1f}\n"
+                         "L_ALT:{:.1f}\nC_ALT:{:.1f}\nH_ALT:{:.1f}\n"
+                         "ACCENT:{}".format(name, *args))
 
     chooser.destroy()
 
@@ -153,13 +174,21 @@ def load_from_file():
                     "fg_l",
                     "fg_c",
                     "fg_h",
+                    "fg_alt_l",
+                    "fg_alt_c",
+                    "fg_alt_h",
                     "bg_l",
                     "bg_c",
                     "bg_h",
+                    "bg_alt_l",
+                    "bg_alt_c",
+                    "bg_alt_h",
                     "l",
                     "c",
                     "h",
-                    "dim",
+                    "l_alt",
+                    "c_alt",
+                    "h_alt",
                 ]
                 # matches one of the prefixes followed by : and any number of spaces
                 # then any number size with optional preceding hyphen or single decimal
@@ -167,7 +196,6 @@ def load_from_file():
                 # Should be eval-safe
                 regex = f"name: *({NAME_CHARS})\n"
                 regex += r"".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
-                regex += r"oled: *(true|false)\n"
                 regex += r"accent: *(1[0-5]|[0-9])"
                 match = re.match(regex, string.casefold())
 
@@ -175,10 +203,8 @@ def load_from_file():
                     Message('Invalid File Content')
                 else:
                     data.append(string[match.start(1):match.end(1)])
-                    for x in match.groups()[1:-2]:
+                    for x in match.groups()[1:]:
                         data.append(eval(x))
-                    data.append(eval(match.groups()[-2].capitalize()))
-                    data.append(eval(match.groups()[-1]))
 
         except UnicodeDecodeError:
             Message('Invalid File Type')
@@ -317,7 +343,18 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         set_all_colors(build_colors(*get_vals()[:-2]))
 
     def on_save(widget):
-        save_to_file(*get_vals())
+        save_to_file(
+            *[w.value for w in fg_adjuster.adjusters + bg_adjuster.adjusters + [
+                l_adj,
+                c_adj,
+                h_adj,
+                l2_adj,
+                c2_adj,
+                h2_adj,
+                name_entry,
+                accent_display,
+            ]],
+        )
 
     def on_load(widget):
         data = load_from_file()
@@ -325,8 +362,9 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
             l_adj,
             c_adj,
             h_adj,
-            d_adj,
-            oled_toggle,
+            l2_adj,
+            c2_adj,
+            h2_adj,
             accent_display
         ]
         for num, var in enumerate(data):
@@ -340,17 +378,20 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     # Pickers
     fg_adjuster = ColorAdjuster(Color(1, 1, 1), "FG")
     bg_adjuster = ColorAdjuster(Color(0, 0, 0), "BG")
+    bg_adjuster.L_alt_adj.value = 10
 
     # Adjusters
     l_adj = Adjuster.new("Colors Lightness", 50, -100, 100, 5, 10, 1)
     c_adj = Adjuster.new("Colors Chroma", 50, -100, 100, 5, 10, 1)
     h_adj = Adjuster.new("Colors Hue Offset", 20, -180, 180, 5, 15, 1)
-    d_adj = Adjuster.new("Dim/Difference in Contrasts", 20, -100, 100, 5, 10, 1)
+    l2_adj = Adjuster.new("Colors Alt Lightness", -20, -100, 100, 5, 10, 1)
+    c2_adj = Adjuster.new("Colors Alt Chroma", 0, -100, 100, 5, 10, 1)
+    h2_adj = Adjuster.new("Colors Alt Hue", 0, -180, 180, 5, 15, 1)
     color_adj_grid = Grid()
-    color_adj_grid.attach_all(l_adj, h_adj)
-    color_adj_grid.attach_all(c_adj, d_adj, column=1)
+    color_adj_grid.attach_all(l_adj, h_adj, c2_adj)
+    color_adj_grid.attach_all(c_adj, l2_adj, h2_adj, column=1)
 
-    for w in fg_adjuster.adjusters + bg_adjuster.adjusters + [l_adj, c_adj, h_adj, d_adj]:
+    for w in fg_adjuster.adjusters + bg_adjuster.adjusters + [l_adj, c_adj, h_adj, l2_adj, h2_adj, c2_adj]:
         w.adjustment.connect("value-changed", on_adj_change)
 
     def on_ne_change(*args):
@@ -369,21 +410,21 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
 
     save_button = Button("Save", on_save, tooltip="Save current vals to file")
     load_button = Button("Load", on_load, tooltip="Load vals from file")
-    oled_toggle = CheckButton("OLED Mode", False, tooltip="Make the BG pure black")
     export_button = Button("Export", on_export, tooltip="Export palette")
-    action_bar = AutoBox([save_button, load_button, export_button, oled_toggle], 5, 5, 0)
-
-    oled_toggle.connect('toggled', on_adj_change)
+    action_bar = AutoBox([accent_display, save_button, load_button, export_button], 5, 5, 0)
 
     def get_vals():
         return [
             fg_adjuster.color,
             bg_adjuster.color,
+            fg_adjuster.color_alt,
+            bg_adjuster.color_alt,
             l_adj.value,
             c_adj.value,
             h_adj.value,
-            d_adj.value,
-            oled_toggle.value,
+            l2_adj.value,
+            c2_adj.value,
+            h2_adj.value,
             name_entry.value,
             accent_display.value,
         ]
@@ -395,7 +436,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         GC(bg_adjuster, width=2),
         main_box,
         dim_box,
-        AutoBox([name_entry, accent_display], 5, 5, 0)
+        name_entry,
     )
     grid.attach_all(
         color_adj_grid,
