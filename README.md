@@ -40,6 +40,6 @@ Exporters are .py files placed in the `./exporters/` folder. color_thing automat
 ### FAQ
 Question|Answer
 --------|------
-**Q.** WHY? This is so specific|**A.** ¯\_(ツ)_/¯
+**Q.** WHY? This is so specific|**A.** ¯\\\_(ツ)_/¯
 
 [Discount BABL]: https://github.com/Beinsezii/Discount-BABL
