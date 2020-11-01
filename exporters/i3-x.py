@@ -1,5 +1,5 @@
 NAME = "i3 (Xresources)"
-FORMAT = "i3x.config"
+FORMAT = "config"
 
 
 def EXPORT(colors: list, name: str, accent: int) -> bytes:

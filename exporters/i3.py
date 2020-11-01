@@ -1,5 +1,5 @@
 NAME = "i3"
-FORMAT = "i3.config"
+FORMAT = "config"
 
 
 def EXPORT(colors: list, name: str, accent: int) -> bytes:

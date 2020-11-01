@@ -206,16 +206,19 @@ def export(colors, name, accent):
         confirm.props.modal = True
 
         functions = []
-        filenames = []
+        folders = []
+        files = []
         create_text = "The following files will be created:\n"
         overwrite_text = "The following files will be OVERWRITTEN:\n"
 
         for num, cb in enumerate(check_buttons):
             if cb.value:
                 functions.append(EXPORTERS[num].EXPORT)
-                filenames.append(os.path.realpath(f'./{name}/' + EXPORTERS[num].FORMAT.format(name=name)))
+                folder = os.path.realpath(f'./{name}/' + EXPORTERS[num].NAME) + '/'
+                folders.append(folder)
+                files.append(folder + EXPORTERS[num].FORMAT.format(name=name))
 
-        for f in filenames:
+        for f in files:
             if os.path.exists(f):
                 overwrite_text += f + '\n'
             else:
@@ -227,10 +230,12 @@ def export(colors, name, accent):
         response = confirm.run()
 
         if response == Gtk.ResponseType.ACCEPT:
-            if not os.path.exists(f'./{name}/') and len(filenames) > 0:
+            if not os.path.exists(f'./{name}/') and len(files) > 0:
                 os.mkdir(f'./{name}/')
             for num, fn in enumerate(functions):
-                with open(filenames[num], mode='wb') as target:
+                if not os.path.exists(folders[num]):
+                    os.mkdir(folders[num])
+                with open(files[num], mode='wb') as target:
                     target.write(fn(colors, name, accent))
 
         confirm.destroy()
