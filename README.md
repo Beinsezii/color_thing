@@ -14,6 +14,7 @@ A thing that makes coordinated color themes.
   * Dwarf Fortress
   * GIMP Palette
   * i3
+  * Oomox (GTK 2/3)
   * Rofi
   * .Xresources
 * LCH color space for prettiness
@@ -23,7 +24,6 @@ A thing that makes coordinated color themes.
 ### To Do
 * Exporters
   * Alacritty
-  * Oomox
   * Vim
   * ???
 * A more intuitive UI for editing LCH values would be useful
