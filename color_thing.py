@@ -26,18 +26,19 @@ NAME_CHARS = r"[a-zA-Z0-9 _-]+"
 
 
 class ColorAdjuster(Grid):
-    def __init__(self, color: Color, label=""):
+    def __init__(self, label, *vals):
         super(ColorAdjuster, self).__init__()
 
-        self.color = color
+        self.color = Color()
         self.color_alt = Color()
-        L, C, H = self.color.as_LCH()
+        vals = list(vals) + [0] * 6
+        L, C, H, LA, CA, HA = vals[:6]
         self.L_adj = Adjuster.new(f'{label} Lightness', L, -100, 100, 5, 10, 1)
         self.C_adj = Adjuster.new(f'{label} Chroma', C, -100, 100, 5, 10, 1)
         self.H_adj = Adjuster.new(f'{label} Hue', H, 0, 360, 5, 15, 1)
-        self.L_alt_adj = Adjuster.new(f'{label} Alt Lightness', -20, -100, 100, 5, 10, 1)
-        self.C_alt_adj = Adjuster.new(f'{label} Alt Chroma', 0, -100, 100, 5, 10, 1)
-        self.H_alt_adj = Adjuster.new(f'{label} Alt Hue', 0, -180, 180, 5, 15, 1)
+        self.L_alt_adj = Adjuster.new(f'{label} Alt Lightness', LA, -100, 100, 5, 10, 1)
+        self.C_alt_adj = Adjuster.new(f'{label} Alt Chroma', CA, -100, 100, 5, 10, 1)
+        self.H_alt_adj = Adjuster.new(f'{label} Alt Hue', HA, -180, 180, 5, 15, 1)
         self.adjusters = [self.L_adj, self.C_adj, self.H_adj, self.L_alt_adj, self.C_alt_adj, self.H_alt_adj]
         for w in self.adjusters:
             w.adjustment.connect("value-changed", self.__set)
@@ -376,9 +377,8 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         export(build_colors(*get_vals()[:-2]), *get_vals()[-2:])
 
     # Pickers
-    fg_adjuster = ColorAdjuster(Color(1, 1, 1), "FG")
-    bg_adjuster = ColorAdjuster(Color(0, 0, 0), "BG")
-    bg_adjuster.L_alt_adj.value = 10
+    fg_adjuster = ColorAdjuster("FG", 100, 0, 0, -20)
+    bg_adjuster = ColorAdjuster("BG", 0, 0, 0, 10)
 
     # Adjusters
     l_adj = Adjuster.new("Colors Lightness", 50, -100, 100, 5, 10, 1)
