@@ -11,6 +11,7 @@ A thing that makes coordinated color themes.
 
 ### Features
 * Exporters for various programs
+  * Dwarf Fortress
   * GIMP Palette
   * i3
   * Rofi
