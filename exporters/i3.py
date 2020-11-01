@@ -12,11 +12,11 @@ set $fgalt  {colors[15]}
 set $bgalt  {colors[8]}
 
 # class                 border  background text indicator child_border
-client.focused          $accent $accent    $bg  $bg       $accent
-client.focused_inactive $fgalt  $fgalt     $fg  $fg       $fgalt
-client.unfocused        $bg     $bg        $fg  $fg       $bg
-client.urgent           $fg     $fg        $bg  $bg       $fg
-client.placeholder      $bgalt  $bgalt     $fg  $fg       $bgalt
+client.focused          $accent $accent    $bg  $fg       $accent
+client.focused_inactive $fgalt  $fgalt     $bg  $fg       $fgalt
+client.unfocused        $bg     $bg        $fgalt $fgalt  $bg
+client.urgent           $fg     $fg        $bg  $accent   $fg
+client.placeholder      $bgalt  $bgalt     $fg  $bg       $bgalt
 client.background               $bg
 
 bar {{

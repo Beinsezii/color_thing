@@ -11,11 +11,11 @@ set_from_resource $bg i3wm.background {colors[0]}
 set_from_resource $hl i3wm.highlightColor {colors[8]}
 
 # class                 border  background text indicator child_border
-client.focused          $cursor $cursor    $bg  $bg       $cursor
+client.focused          $cursor $cursor    $bg  $fg       $cursor
 client.focused_inactive $hl     $hl        $fg  $fg       $hl
-client.unfocused        $bg     $bg        $fg  $fg       $bg
-client.urgent           $fg     $fg        $bg  $bg       $fg
-client.placeholder      $hl     $hl        $fg  $fg       $hl
+client.unfocused        $bg     $bg        $fg  $hl       $bg
+client.urgent           $fg     $fg        $bg  $cursor   $fg
+client.placeholder      $hl     $hl        $fg  $bg       $hl
 client.background               $bg
 
 bar {{
