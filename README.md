@@ -11,6 +11,7 @@ A thing that makes coordinated color themes.
 
 ### Features
 * Exporters for various programs
+  * Alacritty
   * Dwarf Fortress
   * GIMP Palette
   * i3
@@ -23,7 +24,6 @@ A thing that makes coordinated color themes.
 
 ### To Do
 * Exporters
-  * Alacritty
   * Vim
   * ???
 * A more intuitive UI for editing LCH values would be useful
