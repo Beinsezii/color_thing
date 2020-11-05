@@ -10,7 +10,7 @@ import exporters
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk  # noqa: F401
-from bszgw import Adjuster, AutoBox, Button, CheckButton, Entry, Grid, GridChild as GC, App, Message
+from bszgw import Adjuster, AutoBox, Button, CheckButton, ComboBox, Entry, Grid, GridChild as GC, App, Message
 from discount_babl import Color
 from importlib import import_module
 from pkgutil import iter_modules
@@ -85,7 +85,7 @@ def gen_term_hues(lightness=50, chroma=50, hue=0) -> list:
     return [Color().set_LCH(lightness, chroma, 60 * x + hue) for x in [0, 2, 1, 4, 5, 3]]
 
 
-def build_colors(
+def build_colors(  # noqa: C901  fuck you its only like 50 lines they're just spaced
     fg: Color,
     bg: Color,
     fg_alt: Color,
@@ -96,6 +96,9 @@ def build_colors(
     lightness_alt,
     chroma_alt,
     hue_alt,
+    clip,
+    name,
+    accent,
 ) -> list:
     """Generates all 16 colors from Fg, Bg, and lch offsets"""
 
@@ -107,6 +110,34 @@ def build_colors(
     colors += gen_term_hues(lightness + lightness_alt, chroma + chroma_alt, hue + hue_alt)
 
     colors += [fg_alt]
+
+    if clip == "L":
+        for x in list(range(1, 7)) + list(range(9, 15)):
+            R, G, B = colors[x].as_SRGB()
+            if R > 1 or G > 1 or B > 1:
+                l, c, h = colors[x].as_LCH()
+                colors[x].set_LCH(0, c, h)
+                R, G, B = colors[x].as_SRGB()
+                while R < 1 and G < 1 and B < 1:
+                    l, c, h = colors[x].as_LCH()
+                    colors[x].set_LCH(l + 0.1, c, h)
+                    R, G, B = colors[x].as_SRGB()
+
+    elif clip == "Y":
+        for x in list(range(1, 7)) + list(range(9, 15)):
+            if x < 8:
+                y_target = colors[7].as_XYZ()[1] * (lightness / 100)
+            else:
+                y_target = colors[15].as_XYZ()[1] * (lightness_alt / 100)
+            l, c, h = colors[x].as_LCH()
+            colors[x].set_LCH(0, c, h)
+            y_cur = colors[x].as_XYZ()[1]
+            i = 0
+            while y_cur < y_target:
+                l, c, h = colors[x].as_LCH()
+                colors[x].set_LCH(l + 0.1, c, h)
+                y_cur = colors[x].as_XYZ()[1]
+                i += 1
 
     return colors
 
@@ -136,7 +167,7 @@ def name_valid(name: str) -> bool:  # questionable use since I save the re
 
 def save_to_file(*args):
     args = list(args)
-    name = args.pop(-2)
+    name = args.pop(-3)
     chooser = Gtk.FileChooserDialog()
     chooser.props.action = Gtk.FileChooserAction.SAVE
     chooser.props.do_overwrite_confirmation = True
@@ -154,7 +185,7 @@ def save_to_file(*args):
                          "BG_ALT_L:{:.1f}\nBG_ALT_C:{:.1f}\nBG_ALT_H:{:.1f}\n"
                          "L:{:.1f}\nC:{:.1f}\nH:{:.1f}\n"
                          "L_ALT:{:.1f}\nC_ALT:{:.1f}\nH_ALT:{:.1f}\n"
-                         "ACCENT:{}".format(name, *args))
+                         "ACCENT:{}\nCLIP:{}".format(name, *args))
 
     chooser.destroy()
 
@@ -197,15 +228,17 @@ def load_from_file():
                 # Should be eval-safe
                 regex = f"name: *({NAME_CHARS})\n"
                 regex += r"".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
-                regex += r"accent: *(1[0-5]|[0-9])"
+                regex += r"accent: *(1[0-5]|[0-9])\n"
+                regex += r"clip: *([lyn])"
                 match = re.match(regex, string.casefold())
 
                 if match is None:
                     Message('Invalid File Content')
                 else:
                     data.append(string[match.start(1):match.end(1)])
-                    for x in match.groups()[1:]:
+                    for x in match.groups()[1:-1]:
                         data.append(eval(x))
+                    data.append(match.groups()[-1].upper())
 
         except UnicodeDecodeError:
             Message('Invalid File Type')
@@ -341,7 +374,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         override_color(accent_display, fg=colors[0], bg=colors[accent_display.value])
 
     def on_adj_change(widget):
-        set_all_colors(build_colors(*get_vals()[:-2]))
+        set_all_colors(build_colors(*get_vals()))
 
     def on_save(widget):
         save_to_file(
@@ -354,6 +387,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
                 h2_adj,
                 name_entry,
                 accent_display,
+                clip_combo,
             ]],
         )
 
@@ -366,7 +400,8 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
             l2_adj,
             c2_adj,
             h2_adj,
-            accent_display
+            accent_display,
+            clip_combo,
         ]
         for num, var in enumerate(data):
             widgets[num].value = var
@@ -374,7 +409,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         on_adj_change(None)
 
     def on_export(widget):
-        export(build_colors(*get_vals()[:-2]), *get_vals()[-2:])
+        export(build_colors(*get_vals()), *get_vals()[-2:])
 
     # Pickers
     fg_adjuster = ColorAdjuster("FG", 100, 0, 0, -20)
@@ -407,6 +442,25 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     name_entry.props.spacing = 5
     name_entry.text_buffer.connect("inserted-text", on_ne_change)
     name_entry.text_buffer.connect("deleted-text", on_ne_change)
+    clip_tt = """\
+Clipping affects the auto-gened colors, aka 1-6 and 9-14
+since the user doesn't have individual control.
+
+Clip L: Reduces lightness until all RGB vals are < 100%. 'Dumb' method.
+
+Clip Y: Calculates the relative luminance of the foreground colors,
+and adjusts the others' lightness to match. The colors' lightness sliders
+will be used to cap them at a % *below* the foreground's luminance.
+  -  "Colors Lightness: 70" will set it to 70% of foreground's luminance.
+  -  "Colors Alt Lightness: 70" will set it to 70% of alt foreground's luminance.
+TODO: add option for Y clip where the sliders work in reverse for light themes.
+"""
+    # TODO ^^^
+    clip_combo = ComboBox.new({"Don't Clip": 'N', "Clip Lightness": 'L', "Clip Luminance": 'Y'}, 'L', expand=False, tooltip=clip_tt)
+    name_clip_grid = Grid()
+    name_clip_grid.attach_all(name_entry, clip_combo, direction=Gtk.DirectionType.RIGHT)
+
+    clip_combo.connect("changed", on_adj_change)
 
     save_button = Button("Save", on_save, tooltip="Save current vals to file")
     load_button = Button("Load", on_load, tooltip="Load vals from file")
@@ -425,6 +479,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
             l2_adj.value,
             c2_adj.value,
             h2_adj.value,
+            clip_combo.value,
             name_entry.value,
             accent_display.value,
         ]
@@ -436,7 +491,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         GC(bg_adjuster, width=2),
         main_box,
         dim_box,
-        name_entry,
+        name_clip_grid,
     )
     grid.attach_all(
         color_adj_grid,
