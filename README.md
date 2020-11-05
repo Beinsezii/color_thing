@@ -17,6 +17,7 @@ A thing that makes coordinated color themes.
   * i3
   * Oomox (GTK 2/3)
   * Rofi
+  * Vim Truecolor (WIP)
   * .Xresources
 * LCH color space for prettiness
 * Simple live previews
@@ -24,7 +25,6 @@ A thing that makes coordinated color themes.
 
 ### To Do
 * Exporters
-  * Vim
   * ???
 * A more intuitive UI for editing LCH values would be useful
 * Shell interface?
