@@ -456,7 +456,7 @@ will be used to cap them at a % *below* the foreground's luminance.
 TODO: add option for Y clip where the sliders work in reverse for light themes.
 """
     # TODO ^^^
-    clip_combo = ComboBox.new({"Don't Clip": 'N', "Clip Lightness": 'L', "Clip Luminance": 'Y'}, 'L', expand=False, tooltip=clip_tt)
+    clip_combo = ComboBox.new({"Don't Clip": 'N', "Clip Lightness": 'L', "Clip Luminance": 'Y'}, 'Y', expand=False, tooltip=clip_tt)
     name_clip_grid = Grid()
     name_clip_grid.attach_all(name_entry, clip_combo, direction=Gtk.DirectionType.RIGHT)
 
