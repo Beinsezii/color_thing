@@ -416,10 +416,10 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     bg_adjuster = ColorAdjuster("BG", 0, 0, 0, 10)
 
     # Adjusters
-    l_adj = Adjuster.new("Colors Lightness", 50, 0, 100, 5, 10, 1)
+    l_adj = Adjuster.new("Colors Lightness", 70, 0, 100, 5, 10, 1)
     c_adj = Adjuster.new("Colors Chroma", 50, 0, 100, 5, 10, 1)
     h_adj = Adjuster.new("Colors Hue Offset", 20, -180, 180, 5, 15, 1)
-    l2_adj = Adjuster.new("Colors Alt Lightness", -20, -100, 100, 5, 10, 1)
+    l2_adj = Adjuster.new("Colors Alt Lightness", 70, -100, 100, 5, 10, 1)
     c2_adj = Adjuster.new("Colors Alt Chroma", 0, -100, 100, 5, 10, 1)
     h2_adj = Adjuster.new("Colors Alt Hue", 0, -180, 180, 5, 15, 1)
     color_adj_grid = Grid()
