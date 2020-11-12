@@ -12,6 +12,7 @@ A thing that makes coordinated color themes.
 ### Features
 * Exporters for various programs
   * Alacritty
+  * Dunst
   * Dwarf Fortress
   * GIMP Palette
   * i3
