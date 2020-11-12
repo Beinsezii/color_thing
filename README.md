@@ -5,7 +5,7 @@ A thing that makes coordinated color themes.
 
 ### Requirements 
 * Latest Python 3
-* [Discount BABL] dropped into the same folder or added to PYTHONPATH
+* [Discount BABL] and [BSZGW] dropped into the same folder or added to PYTHONPATH
 * PyGObject
 * GTK+ 3
 
@@ -43,3 +43,4 @@ Question|Answer
 **Q.** WHY? This is so specific|**A.** ¯\\\_(ツ)_/¯
 
 [Discount BABL]: https://github.com/Beinsezii/Discount-BABL
+[BSZGW]: https://github.com/Beinsezii/BSZGW
