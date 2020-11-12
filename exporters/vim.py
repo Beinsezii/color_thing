@@ -83,14 +83,19 @@ exe 'hi Comment guifg='.s:fga
 
 " ## Syntax ##
 exe 'hi Constant guifg='.s:c0
+exe 'hi Underlined guifg='.s:c6.' guisp='.s:c0
+
 exe 'hi Statement guifg='.s:c1
+
 exe 'hi Type guifg='.s:c2
+
 exe 'hi Identifier guifg='.s:c3
+
 exe 'hi Error guifg='.s:c4.' guibg=NONE gui=bold'
-exe 'hi PreProc guifg='.s:c5
-exe 'hi Todo guifg='.s:c7.' guibg=NONE gui=bold'
 exe 'hi Special guifg='.s:c10.' gui=bold'
-exe 'hi Underlined guifg='.s:c11
+
+exe 'hi PreProc guifg='.s:c5
+exe 'hi Todo guifg='.s:c11.' guibg=NONE gui=bold,undercurl guisp='.s:c5
 
 " ## Misc Built-in ##
 " ## Messages ##
