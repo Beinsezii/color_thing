@@ -126,9 +126,9 @@ def build_colors(  # noqa: C901  fuck you its only like 50 lines they're just sp
     elif clip == "Y":
         for x in list(range(1, 7)) + list(range(9, 15)):
             if x < 8:
-                y_target = colors[7].as_XYZ()[1] * (lightness / 100)
+                y_target = colors[7].as_XYZ()[1] + lightness
             else:
-                y_target = colors[15].as_XYZ()[1] * (lightness_alt / 100)
+                y_target = colors[15].as_XYZ()[1] + lightness_alt
             l, c, h = colors[x].as_LCH()
             colors[x].set_LCH(0, c, h)
             y_cur = colors[x].as_XYZ()[1]
@@ -355,6 +355,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
         widget.provider = Gtk.CssProvider()
         widget.props.height_request = 75
         widget.props.width_request = 75
+        widget.props.expand = True
 
     def set_all_colors(colors: list):
         # term color labels
@@ -416,10 +417,10 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     bg_adjuster = ColorAdjuster("BG", 0, 0, 0, 10)
 
     # Adjusters
-    l_adj = Adjuster.new("Colors Lightness", 70, 0, 100, 5, 10, 1)
+    l_adj = Adjuster.new("Colors Lightness", -30, -100, 100, 5, 10, 1)
     c_adj = Adjuster.new("Colors Chroma", 50, 0, 100, 5, 10, 1)
     h_adj = Adjuster.new("Colors Hue Offset", 20, -180, 180, 5, 15, 1)
-    l2_adj = Adjuster.new("Colors Alt Lightness", 70, -100, 100, 5, 10, 1)
+    l2_adj = Adjuster.new("Colors Alt Lightness", -30, -100, 100, 5, 10, 1)
     c2_adj = Adjuster.new("Colors Alt Chroma", 0, -100, 100, 5, 10, 1)
     h2_adj = Adjuster.new("Colors Alt Hue", 0, -180, 180, 5, 15, 1)
     color_adj_grid = Grid()
@@ -437,7 +438,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
             save_button.props.sensitive = False
             export_button.props.sensitive = False
 
-    name_entry = Entry("Theme Name:", "Untitled Theme", multi_line=False)
+    name_entry = Entry("Theme Name:", "Untitled_Theme", multi_line=False)
     name_entry.props.orientation = 0
     name_entry.props.spacing = 5
     name_entry.text_buffer.connect("inserted-text", on_ne_change)
@@ -449,18 +450,23 @@ since the user doesn't have individual control.
 Clip L: Reduces lightness until all RGB vals are < 100%. 'Dumb' method.
 
 Clip Y: Calculates the relative luminance of the foreground colors,
-and adjusts the others' lightness to match. The colors' lightness sliders
-will be used to cap them at a % *below* the foreground's luminance.
-  -  "Colors Lightness: 70" will set it to 70% of foreground's luminance.
-  -  "Colors Alt Lightness: 70" will set it to 70% of alt foreground's luminance.
-TODO: add option for Y clip where the sliders work in reverse for light themes.
+and adjusts the others' lightness to match.
+The lightness sliders will therefore act as an offset to FG / FG Alt
 """
-    # TODO ^^^
     clip_combo = ComboBox.new({"Don't Clip": 'N', "Clip Lightness": 'L', "Clip Luminance": 'Y'}, 'Y', expand=False, tooltip=clip_tt)
     name_clip_grid = Grid()
     name_clip_grid.attach_all(name_entry, clip_combo, direction=Gtk.DirectionType.RIGHT)
 
-    clip_combo.connect("changed", on_adj_change)
+    def on_clip_change(*args):
+        if clip_combo.value == "Y":
+            l_adj.adjustment.props.lower = -100
+        else:
+            l_adj.adjustment.props.lower = 0
+            if l_adj.value < 0:
+                l_adj.value = 50
+        on_adj_change(*args)
+
+    clip_combo.connect("changed", on_clip_change)
 
     save_button = Button("Save", on_save, tooltip="Save current vals to file")
     load_button = Button("Load", on_load, tooltip="Load vals from file")
