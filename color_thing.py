@@ -123,22 +123,6 @@ def build_colors(  # noqa: C901  fuck you its only like 50 lines they're just sp
                     colors[x].set_LCH(l + 0.1, c, h)
                     R, G, B = colors[x].as_SRGB()
 
-    elif clip == "Y":
-        for x in list(range(1, 7)) + list(range(9, 15)):
-            if x < 8:
-                y_target = colors[7].as_XYZ()[1] + lightness
-            else:
-                y_target = colors[15].as_XYZ()[1] + lightness_alt
-            l, c, h = colors[x].as_LCH()
-            colors[x].set_LCH(0, c, h)
-            y_cur = colors[x].as_XYZ()[1]
-            i = 0
-            while y_cur < y_target:
-                l, c, h = colors[x].as_LCH()
-                colors[x].set_LCH(l + 0.1, c, h)
-                y_cur = colors[x].as_XYZ()[1]
-                i += 1
-
     return colors
 
 
@@ -229,7 +213,7 @@ def load_from_file():
                 regex = f"name: *({NAME_CHARS})\n"
                 regex += r"".join([f"{x}: *(-?\d+\.?\d*)\n" for x in prefixes])
                 regex += r"accent: *(1[0-5]|[0-9])\n"
-                regex += r"clip: *([lyn])"
+                regex += r"clip: *([ln])"
                 match = re.match(regex, string.casefold())
 
                 if match is None:
@@ -316,6 +300,7 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     dim_box.entry.provider = Gtk.CssProvider()
 
     accent_display = Display("Accent Color", 7, "Used for accents during export.\nClick colors to set.")
+    reverse_check = CheckButton("Reverse Preview", False)
 
     def on_color_button(widget, num):
         accent_display.value = num[0]
@@ -368,6 +353,8 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
                 bg = colors[15]
             elif num > 8:
                 bg = colors[8]
+            if reverse_check.value:
+                c, bg = bg, c
             override_color(term_colors[num], fg=c, bg=bg)
         # main boxes
         override_color(main_box.entry, fg=colors[7], bg=colors[0])
@@ -376,6 +363,8 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
 
     def on_adj_change(widget):
         set_all_colors(build_colors(*get_vals()))
+
+    reverse_check.connect('toggled', on_adj_change)
 
     def on_save(widget):
         save_to_file(
@@ -417,10 +406,10 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     bg_adjuster = ColorAdjuster("BG", 0, 0, 0, 10)
 
     # Adjusters
-    l_adj = Adjuster.new("Colors Lightness", -30, -100, 100, 5, 10, 1)
+    l_adj = Adjuster.new("Colors Lightness", 50, 0, 100, 5, 10, 1)
     c_adj = Adjuster.new("Colors Chroma", 50, 0, 100, 5, 10, 1)
     h_adj = Adjuster.new("Colors Hue Offset", 20, -180, 180, 5, 15, 1)
-    l2_adj = Adjuster.new("Colors Alt Lightness", -30, -100, 100, 5, 10, 1)
+    l2_adj = Adjuster.new("Colors Alt Lightness", -20, -100, 100, 5, 10, 1)
     c2_adj = Adjuster.new("Colors Alt Chroma", 0, -100, 100, 5, 10, 1)
     h2_adj = Adjuster.new("Colors Alt Hue", 0, -180, 180, 5, 15, 1)
     color_adj_grid = Grid()
@@ -447,31 +436,18 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
 Clipping affects the auto-gened colors, aka 1-6 and 9-14
 since the user doesn't have individual control.
 
-Clip L: Reduces lightness until all RGB vals are < 100%. 'Dumb' method.
-
-Clip Y: Calculates the relative luminance of the foreground colors,
-and adjusts the others' lightness to match.
-The lightness sliders will therefore act as an offset to FG / FG Alt
+Clip L: Reduces lightness until all RGB vals are < 100%. 'Dumb' method. Doesn't account for vals <0%
 """
-    clip_combo = ComboBox.new({"Don't Clip": 'N', "Clip Lightness": 'L', "Clip Luminance": 'Y'}, 'Y', expand=False, tooltip=clip_tt)
+    clip_combo = ComboBox.new({"Don't Clip": 'N', "Clip Lightness": 'L'}, 'N', expand=False, tooltip=clip_tt)
     name_clip_grid = Grid()
     name_clip_grid.attach_all(name_entry, clip_combo, direction=Gtk.DirectionType.RIGHT)
 
-    def on_clip_change(*args):
-        if clip_combo.value == "Y":
-            l_adj.adjustment.props.lower = -100
-        else:
-            l_adj.adjustment.props.lower = 0
-            if l_adj.value < 0:
-                l_adj.value = 50
-        on_adj_change(*args)
-
-    clip_combo.connect("changed", on_clip_change)
+    clip_combo.connect("changed", on_adj_change)
 
     save_button = Button("Save", on_save, tooltip="Save current vals to file")
     load_button = Button("Load", on_load, tooltip="Load vals from file")
     export_button = Button("Export", on_export, tooltip="Export palette")
-    action_bar = AutoBox([accent_display, save_button, load_button, export_button], 5, 5, 0)
+    action_bar = AutoBox([reverse_check, accent_display, save_button, load_button, export_button], 5, 5, 0)
 
     def get_vals():
         return [
