@@ -10,7 +10,7 @@ import exporters
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk  # noqa: F401
-from bszgw import Adjuster, AutoBox, Button, CheckButton, ComboBox, Entry, Grid, GridChild as GC, App, Message
+from bszgw import AutoBox, Button, CheckButton, ComboBox, Entry, SpinScale, Grid, GridChild as GC, App, Message
 from discount_babl import Color
 from importlib import import_module
 from pkgutil import iter_modules
@@ -33,25 +33,18 @@ class ColorAdjuster(Grid):
         self.color_alt = Color()
         vals = list(vals) + [0] * 6
         L, C, H, LA, CA, HA = vals[:6]
-        self.L_adj = Adjuster.new(f'{label} Lightness', L, 0, 100, 5, 10, 1)
-        self.C_adj = Adjuster.new(f'{label} Chroma', C, 0, 100, 5, 10, 1)
-        self.H_adj = Adjuster.new(f'{label} Hue', H, 0, 360, 5, 15, 1)
-        self.L_alt_adj = Adjuster.new(f'{label} Alt Lightness', LA, -100, 100, 5, 10, 1)
-        self.C_alt_adj = Adjuster.new(f'{label} Alt Chroma', CA, -100, 100, 5, 10, 1)
-        self.H_alt_adj = Adjuster.new(f'{label} Alt Hue', HA, -180, 180, 5, 15, 1)
+        self.L_adj = SpinScale.new(L, 0, 100, 5, 10, f"{label} Lightness", 1)
+        self.C_adj = SpinScale.new(C, 0, 100, 5, 10, f"{label} Chroma", 1)
+        self.H_adj = SpinScale.new(H, 0, 360, 5, 15, f"{label} Hue", 1)
+        self.L_alt_adj = SpinScale.new(LA, -100, 100, 5, 10, f"{label} Alt Lightness", 1)
+        self.C_alt_adj = SpinScale.new(CA, -100, 100, 5, 10, f"{label} Alt Chroma", 1)
+        self.H_alt_adj = SpinScale.new(HA, -180, 180, 5, 15, f"{label} Alt Hue", 1)
         self.adjusters = [self.L_adj, self.C_adj, self.H_adj, self.L_alt_adj, self.C_alt_adj, self.H_alt_adj]
         for w in self.adjusters:
             w.adjustment.connect("value-changed", self.__set)
 
-        self.attach_all(
-            *self.adjusters[:3],
-            direction=Gtk.DirectionType.RIGHT,
-        )
-        self.attach_all(
-            *self.adjusters[3:],
-            direction=Gtk.DirectionType.RIGHT,
-            row=1
-        )
+        self.attach_all_right(*self.adjusters[:3])
+        self.attach_all_right(*self.adjusters[3:], row=1)
 
         self.__set(None)
 
@@ -235,7 +228,7 @@ def export(colors, name, accent):
 
     grid = Grid()
     grid.props.margin = 5
-    grid.attach_all(*check_buttons)
+    grid.attach_all_down(*check_buttons)
 
     dialog = Gtk.Dialog()
     dialog.get_content_area().add(grid)
@@ -289,12 +282,12 @@ def export(colors, name, accent):
 
 def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of making a class and writing self everywhere
     # Main text boxes
-    main_box = Entry(label="Foreground/Background", value=LOREM_IPSUM, min_height=150, min_width=650)
+    main_box = Entry(label="Foreground/Background", value=LOREM_IPSUM, min_height=150, min_width=650, multi_line=True)
     main_box.entry.props.wrap_mode = Gtk.WrapMode.WORD
     main_box.entry.props.editable = False
     main_box.entry.provider = Gtk.CssProvider()
 
-    dim_box = Entry(label="Foreground2/Background2", value=LOREM_IPSUM, min_height=150, min_width=650)
+    dim_box = Entry(label="Foreground2/Background2", value=LOREM_IPSUM, min_height=150, min_width=650, multi_line=True)
     dim_box.entry.props.wrap_mode = Gtk.WrapMode.WORD
     dim_box.entry.props.editable = False
     dim_box.entry.provider = Gtk.CssProvider()
@@ -329,9 +322,9 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     ]
 
     colors_grid = Grid()
-    colors_grid.attach_all(*term_color_labels, direction=Gtk.DirectionType.RIGHT)
-    colors_grid.attach_all(*term_colors_bright, row=1, direction=Gtk.DirectionType.RIGHT)
-    colors_grid.attach_all(*term_colors_dim, row=2, direction=Gtk.DirectionType.RIGHT)
+    colors_grid.attach_all_right(*term_color_labels)
+    colors_grid.attach_all_right(*term_colors_bright, row=1)
+    colors_grid.attach_all_right(*term_colors_dim, row=2)
 
     term_colors = term_colors_bright + term_colors_dim
 
@@ -406,15 +399,15 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
     bg_adjuster = ColorAdjuster("BG", 0, 0, 0, 10)
 
     # Adjusters
-    l_adj = Adjuster.new("Colors Lightness", 50, 0, 100, 5, 10, 1)
-    c_adj = Adjuster.new("Colors Chroma", 50, 0, 100, 5, 10, 1)
-    h_adj = Adjuster.new("Colors Hue Offset", 20, -180, 180, 5, 15, 1)
-    l2_adj = Adjuster.new("Colors Alt Lightness", -20, -100, 100, 5, 10, 1)
-    c2_adj = Adjuster.new("Colors Alt Chroma", 0, -100, 100, 5, 10, 1)
-    h2_adj = Adjuster.new("Colors Alt Hue", 0, -180, 180, 5, 15, 1)
+    l_adj = SpinScale.new(50, 0, 100, 5, 10, "Colors Lightness", 1)
+    c_adj = SpinScale.new(50, 0, 100, 5, 10, "Colors Chroma", 1)
+    h_adj = SpinScale.new(20, -180, 180, 5, 15, "Colors Hue Offset", 1)
+    l2_adj = SpinScale.new(-20, -100, 100, 5, 10, "Colors Alt Lightness", 1)
+    c2_adj = SpinScale.new(0, -100, 100, 5, 10, "Colors Alt Chroma", 1)
+    h2_adj = SpinScale.new(0, -180, 180, 5, 15, "Colors Alt Hue", 1)
     color_adj_grid = Grid()
-    color_adj_grid.attach_all(l_adj, h_adj, c2_adj)
-    color_adj_grid.attach_all(c_adj, l2_adj, h2_adj, column=1)
+    color_adj_grid.attach_all_down(l_adj, h_adj, c2_adj)
+    color_adj_grid.attach_all_down(c_adj, l2_adj, h2_adj, column=1)
 
     for w in fg_adjuster.adjusters + bg_adjuster.adjusters + [l_adj, c_adj, h_adj, l2_adj, h2_adj, c2_adj]:
         w.adjustment.connect("value-changed", on_adj_change)
@@ -427,9 +420,8 @@ def main():  # noqa: C901 I'm just gonna slap the UI code in main instead of mak
             save_button.props.sensitive = False
             export_button.props.sensitive = False
 
-    name_entry = Entry("Theme Name:", "Untitled_Theme", multi_line=False)
-    name_entry.props.orientation = 0
-    name_entry.props.spacing = 5
+    name_entry = Entry("Untitled_Theme")
+    name_entry.props.tooltip_text = "Theme Name"
     name_entry.text_buffer.connect("inserted-text", on_ne_change)
     name_entry.text_buffer.connect("deleted-text", on_ne_change)
     clip_tt = """\
@@ -438,15 +430,19 @@ since the user doesn't have individual control.
 
 Clip L: Reduces lightness until all RGB vals are < 100%. 'Dumb' method. Doesn't account for vals <0%
 """
-    clip_combo = ComboBox.new({"Don't Clip": 'N', "Clip Lightness": 'L'}, 'N', expand=False, tooltip=clip_tt)
+    clip_combo = ComboBox.new_dict({"Don't Clip": 'N', "Clip Lightness": 'L'}, 'N')
+    clip_combo.props.tooltip_text = clip_tt
     name_clip_grid = Grid()
-    name_clip_grid.attach_all(name_entry, clip_combo, direction=Gtk.DirectionType.RIGHT)
+    name_clip_grid.attach_all_right(name_entry, clip_combo)
 
     clip_combo.connect("changed", on_adj_change)
 
-    save_button = Button("Save", on_save, tooltip="Save current vals to file")
-    load_button = Button("Load", on_load, tooltip="Load vals from file")
-    export_button = Button("Export", on_export, tooltip="Export palette")
+    save_button = Button("Save", on_save)
+    save_button.props.tooltip_text = "Save current vals to file"
+    load_button = Button("Load", on_load)
+    load_button.props.tooltip_text = "Load vals from file"
+    export_button = Button("Export", on_export)
+    export_button.props.tooltip_text = "Export palette"
     action_bar = AutoBox([reverse_check, accent_display, save_button, load_button, export_button], 5, 5, 0)
 
     def get_vals():
@@ -468,14 +464,14 @@ Clip L: Reduces lightness until all RGB vals are < 100%. 'Dumb' method. Doesn't 
 
     grid = Grid()
 
-    grid.attach_all(
+    grid.attach_all_down(
         GC(fg_adjuster, width=2),
         GC(bg_adjuster, width=2),
         main_box,
         dim_box,
         name_clip_grid,
     )
-    grid.attach_all(
+    grid.attach_all_down(
         color_adj_grid,
         colors_grid,
         action_bar,

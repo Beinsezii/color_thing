@@ -78,12 +78,11 @@ class colorPicker(bszgw.Grid):
 
         self.display = Display(label, value, tooltip)
         override_color(self.display, fg=self.colors[value], bg=self.colors[0])
-        self.attach_all(bszgw.GridChild(self.display, width=8))
-        self.attach_all(*self.buttons[:8], row=1, direction=Gtk.DirectionType.RIGHT)
-        self.attach_all(*self.buttons[8:], row=2, direction=Gtk.DirectionType.RIGHT)
+        self.attach_all_down(bszgw.GridChild(self.display, width=8))
+        self.attach_all_right(*self.buttons[:8], row=1)
+        self.attach_all_right(*self.buttons[8:], row=2)
 
     def on_button(self, widget, val):
-        val = val[0]
         self.display.value = val
         override_color(self.display, fg=self.colors[val], bg=self.colors[0])
 
@@ -107,11 +106,11 @@ def choose_colors(cols: list, ac: int) -> dict:
     todo = colorPicker(cols, "Todo", 9, TT_TD)
 
     grid = bszgw.Grid()
-    grid.attach_all(bszgw.GridChild(Gtk.Label(
+    grid.attach_all_down(bszgw.GridChild(Gtk.Label(
         "Vim (Truecolor) export color picker. See tooltips."), width=3))
-    grid.attach_all(constant, preproc, underlined)
-    grid.attach_all(identifier, type, error, column=1)
-    grid.attach_all(statement, special, todo, column=2)
+    grid.attach_all_down(constant, preproc, underlined)
+    grid.attach_all_down(identifier, type, error, column=1)
+    grid.attach_all_down(statement, special, todo, column=2)
 
     dialog = Gtk.Dialog()
     dialog.get_content_area().add(grid)
