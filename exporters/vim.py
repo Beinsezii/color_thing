@@ -207,6 +207,11 @@ hi! link Pmenu NormalFloat
 hi! link PmenuSel Cursor
 hi! link PmenuSbar Pmenu
 exe 'hi PmenuThumb guibg='.s:fga
+
+" ## Vim Rainbow ##
+let g:rainbow_conf = {
+\	'guifgs': [''.s:constant, ''.s:identifier, ''.s:statement, ''.s:preproc, ''.s:type],
+\}
 """
 
     return bytes(data, encoding='UTF-8')
