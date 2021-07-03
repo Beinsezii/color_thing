@@ -207,7 +207,6 @@ hi! link PmenuSbar Pmenu
 exe 'hi PmenuThumb guibg='.s:fga
 
 " ## Statusbar ##
-hi! link User0 Cursor
 exe 'hi User1 guifg='.s:bg.' guibg='.s:constant
 exe 'hi User2 guifg='.s:bg.' guibg='.s:identifier
 exe 'hi User3 guifg='.s:bg.' guibg='.s:statement
