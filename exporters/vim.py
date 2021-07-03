@@ -153,8 +153,6 @@ let s:bg = '{colors[0]}'
 let s:fga = '{colors[15]}'
 let s:bga = '{colors[8]}'
 let s:ac = '{colors[accent]}'
-
-" Numbered colors are in order of priority, with lower being higher. Used for syntax.
 """
     for k in groups:
         data += f"let s:{k} = '{colors[groups[k]]}'\n"
@@ -207,6 +205,19 @@ hi! link Pmenu NormalFloat
 hi! link PmenuSel Cursor
 hi! link PmenuSbar Pmenu
 exe 'hi PmenuThumb guibg='.s:fga
+
+" ## Statusbar ##
+hi! link User0 Cursor
+exe 'hi User1 guifg='.s:bg.' guibg='.s:constant
+exe 'hi User2 guifg='.s:bg.' guibg='.s:identifier
+exe 'hi User3 guifg='.s:bg.' guibg='.s:statement
+exe 'hi User4 guifg='.s:bg.' guibg='.s:preproc
+exe 'hi User5 guifg='.s:bg.' guibg='.s:type
+exe 'hi User6 guifg='.s:bg.' guibg='.s:special
+exe 'hi User7 guifg='.s:bg.' guibg='.s:error
+exe 'hi User8 guifg='.s:bg.' guibg='.s:underlined
+exe 'hi User9 guifg='.s:bg.' guibg='.s:todo
+
 
 " ## Vim Rainbow ##
 let g:rainbow_conf = {
